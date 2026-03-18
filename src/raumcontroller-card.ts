@@ -362,16 +362,9 @@ export class RaumcontrollerCard extends HTMLElement {
   }
 
   private renderTile(label: string, entityId: string | undefined, icon: string): string {
-    if (!entityId) {
-      return `
-        <div class="rc-tile rc-tile-disabled">
-          <div class="rc-tile-header">
-            <div class="rc-tile-name">${label}</div>
-            <div class="rc-tile-icon">${icon}</div>
-          </div>
-          <div class="rc-tile-state">nicht konfiguriert</div>
-        </div>
-      `;
+    // Wenn keine Entität gesetzt ist, gar keinen Button anzeigen
+    if (!entityId || entityId.trim() === "") {
+      return "";
     }
 
     const entity = this.getEntity(entityId);
