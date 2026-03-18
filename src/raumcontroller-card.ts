@@ -227,12 +227,19 @@ export class RaumcontrollerCard extends HTMLElement {
           flex-direction: column;
           gap: 6px;
           cursor: pointer;
-          transition: transform 0.12s ease-out, background 0.12s ease-out, box-shadow 0.12s ease-out;
+          transition: transform 0.15s ease-out, background 0.15s ease-out, box-shadow 0.15s ease-out;
+          touch-action: manipulation;
+          user-select: none;
+          -webkit-user-select: none;
         }
 
         .rc-tile:hover {
           transform: translateY(-1px);
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+        }
+
+        .rc-tile:active {
+          transform: scale(0.96);
         }
 
         .rc-tile-header {
@@ -349,14 +356,60 @@ export class RaumcontrollerCard extends HTMLElement {
     const root = this.shadowRoot;
     if (!root || !this._hass) return;
 
+    const HOLD_MS = 400;
+
     root.querySelectorAll<HTMLElement>(".rc-tile[data-entity]").forEach((tile) => {
       const entityId = tile.dataset.entity;
       if (!entityId) return;
 
-      tile.onclick = () => {
-        this.handleTileClick(entityId);
+      let holdTimer: ReturnType<typeof setTimeout> | null = null;
+      let didHold = false;
+
+      const startHold = (e: Event) => {
+        didHold = false;
+        holdTimer = setTimeout(() => {
+          didHold = true;
+          this.openMoreInfo(entityId);
+          tile.style.transform = "scale(0.95)";
+          setTimeout(() => { tile.style.transform = ""; }, 150);
+        }, HOLD_MS);
       };
+
+      const endHold = (e: Event) => {
+        if (holdTimer) {
+          clearTimeout(holdTimer);
+          holdTimer = null;
+        }
+        if (!didHold) {
+          this.handleTileClick(entityId);
+        }
+        didHold = false;
+      };
+
+      const cancelHold = () => {
+        if (holdTimer) {
+          clearTimeout(holdTimer);
+          holdTimer = null;
+        }
+      };
+
+      tile.addEventListener("pointerdown", startHold);
+      tile.addEventListener("pointerup", endHold);
+      tile.addEventListener("pointercancel", cancelHold);
+      tile.addEventListener("pointerleave", cancelHold);
+      tile.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      tile.onclick = (e) => { e.preventDefault(); };
     });
+  }
+
+  private openMoreInfo(entityId: string): void {
+    const event = new Event("hass-more-info", {
+      bubbles: true,
+      composed: true
+    });
+    (event as any).detail = { entityId };
+    this.dispatchEvent(event);
   }
 
   private handleTileClick(entityId: string): void {
@@ -373,28 +426,13 @@ export class RaumcontrollerCard extends HTMLElement {
         });
         break;
       case "cover":
-        this._hass.callService(
-          "cover",
-          entity.state === "open" ? "close_cover" : "open_cover",
-          {
-            entity_id: entityId
-          }
-        );
+        this.openMoreInfo(entityId);
         break;
       case "climate":
-        this._hass.callService("climate", "set_hvac_mode", {
-          entity_id: entityId,
-          hvac_mode: entity.state === "off" ? "auto" : "off"
-        });
+        this.openMoreInfo(entityId);
         break;
       case "media_player":
-        this._hass.callService(
-          "media_player",
-          entity.state === "playing" ? "media_pause" : "media_play",
-          {
-            entity_id: entityId
-          }
-        );
+        this.openMoreInfo(entityId);
         break;
       default:
         this._hass.callService(domain, "toggle", {
