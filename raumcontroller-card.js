@@ -1,92 +1,47 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-interface HomeAssistantEntity {
-  entity_id: string;
-  state: string;
-  attributes: Record<string, any>;
-}
-
-interface HomeAssistant {
-  states: Record<string, HomeAssistantEntity>;
-  callService(
-    domain: string,
-    service: string,
-    data: Record<string, any>,
-    target?: any
-  ): void;
-}
-
-interface RaumcontrollerCardConfig {
-  type: string;
-  title?: string;
-  co2_entity?: string;
-  temperature_entity?: string;
-  govee_light?: string;
-  knx_light?: string;
-  cover_entity?: string;
-  ac_entity?: string;
-  radiator_entity?: string;
-  media_entity?: string;
-}
-
 const CARD_VERSION = "0.1.0";
-
-console.info(
-  `%c RAUMCONTROLLER-CARD %c v${CARD_VERSION}`,
-  "color: white; background: #2563eb; font-weight: 700;",
-  "color: #2563eb; background: transparent; font-weight: 700;"
-);
-
-export class RaumcontrollerCard extends HTMLElement {
-  private _config?: RaumcontrollerCardConfig;
-  private _hass?: HomeAssistant;
-
-  setConfig(config: RaumcontrollerCardConfig): void {
-    if (!config) {
-      throw new Error("Invalid configuration for raumcontroller-card.");
+console.info(`%c RAUMCONTROLLER-CARD %c v${CARD_VERSION}`, "color: white; background: #2563eb; font-weight: 700;", "color: #2563eb; background: transparent; font-weight: 700;");
+class RaumcontrollerCard extends HTMLElement {
+    setConfig(config) {
+        if (!config) {
+            throw new Error("Invalid configuration for raumcontroller-card.");
+        }
+        this._config = config;
+        this.render();
     }
-    this._config = config;
-    this.render();
-  }
-
-  set hass(hass: HomeAssistant) {
-    this._hass = hass;
-    this.render();
-  }
-
-  getCardSize(): number {
-    return 5;
-  }
-
-  private getEntity(entityId?: string): HomeAssistantEntity | undefined {
-    if (!entityId || !this._hass) return undefined;
-    return this._hass.states[entityId];
-  }
-
-  private render(): void {
-    if (!this._config || !this._hass) {
-      return;
+    set hass(hass) {
+        this._hass = hass;
+        this.render();
     }
-
-    const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
-
-    const title = this._config.title ?? "Raum";
-
-    const co2 = this.getEntity(this._config.co2_entity);
-    const temp = this.getEntity(this._config.temperature_entity);
-
-    const co2Value = co2?.state;
-    const tempValue = temp?.state;
-
-    const co2Class = (() => {
-      const val = co2Value ? Number(co2Value) : NaN;
-      if (Number.isNaN(val)) return "";
-      if (val < 800) return "status-good";
-      if (val < 1200) return "status-medium";
-      return "status-bad";
-    })();
-
-    root.innerHTML = `
+    getCardSize() {
+        return 5;
+    }
+    getEntity(entityId) {
+        if (!entityId || !this._hass)
+            return undefined;
+        return this._hass.states[entityId];
+    }
+    render() {
+        if (!this._config || !this._hass) {
+            return;
+        }
+        const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
+        const title = this._config.title ?? "Raum";
+        const co2 = this.getEntity(this._config.co2_entity);
+        const temp = this.getEntity(this._config.temperature_entity);
+        const co2Value = co2?.state;
+        const tempValue = temp?.state;
+        const co2Class = (() => {
+            const val = co2Value ? Number(co2Value) : NaN;
+            if (Number.isNaN(val))
+                return "";
+            if (val < 800)
+                return "status-good";
+            if (val < 1200)
+                return "status-medium";
+            return "status-bad";
+        })();
+        root.innerHTML = `
       <style>
         :host {
           --rc-bg: radial-gradient(circle at top left, #1f2933, #020617);
@@ -307,13 +262,11 @@ export class RaumcontrollerCard extends HTMLElement {
         </div>
       </ha-card>
     `;
-
-    this.attachTileHandlers();
-  }
-
-  private renderTile(label: string, entityId: string | undefined, icon: string): string {
-    if (!entityId) {
-      return `
+        this.attachTileHandlers();
+    }
+    renderTile(label, entityId, icon) {
+        if (!entityId) {
+            return `
         <div class="rc-tile rc-tile-disabled">
           <div class="rc-tile-header">
             <div class="rc-tile-name">${label}</div>
@@ -322,13 +275,11 @@ export class RaumcontrollerCard extends HTMLElement {
           <div class="rc-tile-state">nicht konfiguriert</div>
         </div>
       `;
-    }
-
-    const entity = this.getEntity(entityId);
-    const state = entity?.state ?? "unbekannt";
-    const isActive = this.isEntityActive(entity);
-
-    return `
+        }
+        const entity = this.getEntity(entityId);
+        const state = entity?.state ?? "unbekannt";
+        const isActive = this.isEntityActive(entity);
+        return `
       <div class="rc-tile ${isActive ? "rc-tile-active" : ""}" data-entity="${entityId}">
         <div class="rc-tile-header">
           <div class="rc-tile-name">${label}</div>
@@ -337,94 +288,77 @@ export class RaumcontrollerCard extends HTMLElement {
         <div class="rc-tile-state">${state}</div>
       </div>
     `;
-  }
-
-  private isEntityActive(entity?: HomeAssistantEntity): boolean {
-    if (!entity) return false;
-    const onStates = ["on", "open", "playing", "cool", "heat", "auto"];
-    return onStates.includes(entity.state);
-  }
-
-  private attachTileHandlers(): void {
-    const root = this.shadowRoot;
-    if (!root || !this._hass) return;
-
-    root.querySelectorAll<HTMLElement>(".rc-tile[data-entity]").forEach((tile) => {
-      const entityId = tile.dataset.entity;
-      if (!entityId) return;
-
-      tile.onclick = () => {
-        this.handleTileClick(entityId);
-      };
-    });
-  }
-
-  private handleTileClick(entityId: string): void {
-    if (!this._hass) return;
-
-    const [domain] = entityId.split(".");
-    const entity = this.getEntity(entityId);
-    if (!entity) return;
-
-    switch (domain) {
-      case "light":
-        this._hass.callService("light", entity.state === "on" ? "turn_off" : "turn_on", {
-          entity_id: entityId
-        });
-        break;
-      case "cover":
-        this._hass.callService(
-          "cover",
-          entity.state === "open" ? "close_cover" : "open_cover",
-          {
-            entity_id: entityId
-          }
-        );
-        break;
-      case "climate":
-        this._hass.callService("climate", "set_hvac_mode", {
-          entity_id: entityId,
-          hvac_mode: entity.state === "off" ? "auto" : "off"
-        });
-        break;
-      case "media_player":
-        this._hass.callService(
-          "media_player",
-          entity.state === "playing" ? "media_pause" : "media_play",
-          {
-            entity_id: entityId
-          }
-        );
-        break;
-      default:
-        this._hass.callService(domain, "toggle", {
-          entity_id: entityId
+    }
+    isEntityActive(entity) {
+        if (!entity)
+            return false;
+        const onStates = ["on", "open", "playing", "cool", "heat", "auto"];
+        return onStates.includes(entity.state);
+    }
+    attachTileHandlers() {
+        const root = this.shadowRoot;
+        if (!root || !this._hass)
+            return;
+        root.querySelectorAll(".rc-tile[data-entity]").forEach((tile) => {
+            const entityId = tile.dataset.entity;
+            if (!entityId)
+                return;
+            tile.onclick = () => {
+                this.handleTileClick(entityId);
+            };
         });
     }
-  }
-
-  static getConfigElement(): HTMLElement {
-    const el = document.createElement("div");
-    el.innerHTML =
-      "<p>Konfiguration der raumcontroller-card erfolgt über YAML-Optionen in der Karte.</p>";
-    return el;
-  }
-
-  static getStubConfig(): RaumcontrollerCardConfig {
-    return {
-      type: "custom:raumcontroller-card",
-      title: "Raum",
-      co2_entity: "sensor.co2",
-      temperature_entity: "sensor.temperature"
-    };
-  }
+    handleTileClick(entityId) {
+        if (!this._hass)
+            return;
+        const [domain] = entityId.split(".");
+        const entity = this.getEntity(entityId);
+        if (!entity)
+            return;
+        switch (domain) {
+            case "light":
+                this._hass.callService("light", entity.state === "on" ? "turn_off" : "turn_on", {
+                    entity_id: entityId
+                });
+                break;
+            case "cover":
+                this._hass.callService("cover", entity.state === "open" ? "close_cover" : "open_cover", {
+                    entity_id: entityId
+                });
+                break;
+            case "climate":
+                this._hass.callService("climate", "set_hvac_mode", {
+                    entity_id: entityId,
+                    hvac_mode: entity.state === "off" ? "auto" : "off"
+                });
+                break;
+            case "media_player":
+                this._hass.callService("media_player", entity.state === "playing" ? "media_pause" : "media_play", {
+                    entity_id: entityId
+                });
+                break;
+            default:
+                this._hass.callService(domain, "toggle", {
+                    entity_id: entityId
+                });
+        }
+    }
+    static getConfigElement() {
+        const el = document.createElement("div");
+        el.innerHTML =
+            "<p>Konfiguration der raumcontroller-card erfolgt über YAML-Optionen in der Karte.</p>";
+        return el;
+    }
+    static getStubConfig() {
+        return {
+            type: "custom:raumcontroller-card",
+            title: "Raum",
+            co2_entity: "sensor.co2",
+            temperature_entity: "sensor.temperature"
+        };
+    }
 }
-
-declare global {
-  interface HTMLElementTagNameMap {
-    "raumcontroller-card": RaumcontrollerCard;
-  }
-}
-
 customElements.define("raumcontroller-card", RaumcontrollerCard);
 
+export { RaumcontrollerCard };
+//# sourceMappingURL=raumcontroller-card.js.map
