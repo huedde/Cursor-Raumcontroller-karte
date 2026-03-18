@@ -235,10 +235,6 @@ class RaumcontrollerCard extends HTMLElement {
         <div class="rc-header">
           <div>
             <div class="rc-title">${title}</div>
-            <div class="rc-subtitle">
-              ${tempValue ? `${tempValue} °C` : "–"} ·
-              ${co2Value ? `${co2Value} ppm CO₂` : "–"}
-            </div>
           </div>
           <div class="rc-pill">
             <span class="rc-dot"></span>
@@ -252,18 +248,18 @@ class RaumcontrollerCard extends HTMLElement {
               <span class="rc-label">CO₂</span>
               <span class="rc-value">${co2Value ? `${co2Value} ppm` : "–"}</span>
             </div>
-            <div class="rc-info-pill">
+            <div class="rc-info-pill" style="color:${this.getTempColor(tempValue)}">
               <span class="rc-label">Temperatur</span>
-              <span class="rc-value">${tempValue ? `${tempValue} °C` : "–"}</span>
+              <span class="rc-value" style="color:${this.getTempColor(tempValue)}">${tempValue ? `${tempValue} °C` : "–"}</span>
             </div>
           </div>
 
           <div class="rc-grid">
             ${this.renderTile("Govee", this._config.govee_light, "💡")}
             ${this.renderTile("KNX", this._config.knx_light, "💡")}
-            ${this.renderTile("Jalousien", this._config.cover_entity, "🪟")}
+            ${this.renderTile("Jalousien", this._config.cover_entity, `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="9" width="18" height="4" rx="1"/><rect x="3" y="15" width="18" height="4" rx="1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>`)}
             ${this.renderTile("Klima", this._config.ac_entity, "❄️")}
-            ${this.renderTile("Heizung", this._config.radiator_entity, "🔥")}
+            ${this.renderHeatingTile()}
             ${this.renderTile("Musik", this._config.media_entity, "🎵")}
           </div>
         </div>
@@ -293,6 +289,86 @@ class RaumcontrollerCard extends HTMLElement {
           <div class="rc-tile-icon">${icon}</div>
         </div>
         <div class="rc-tile-state">${state}</div>
+      </div>
+    `;
+    }
+    getTempColor(tempValue) {
+        if (!tempValue)
+            return "#9ca3af";
+        const t = Number(tempValue);
+        if (Number.isNaN(t))
+            return "#9ca3af";
+        if (t <= 16)
+            return "#3b82f6";
+        if (t <= 19)
+            return "#38bdf8";
+        if (t <= 22)
+            return "#22c55e";
+        if (t <= 25)
+            return "#f59e0b";
+        if (t <= 28)
+            return "#f97316";
+        return "#ef4444";
+    }
+    getHeatingColor() {
+        if (!this._config?.radiator_entity || !this._hass)
+            return "#9ca3af";
+        const entity = this.getEntity(this._config.radiator_entity);
+        if (!entity)
+            return "#9ca3af";
+        const currentTemp = Number(entity.attributes?.current_temperature);
+        const targetTemp = Number(entity.attributes?.temperature);
+        if (!Number.isNaN(targetTemp)) {
+            if (targetTemp <= 18)
+                return "#3b82f6";
+            if (targetTemp <= 20)
+                return "#38bdf8";
+            if (targetTemp <= 22)
+                return "#22c55e";
+            if (targetTemp <= 24)
+                return "#f59e0b";
+            return "#ef4444";
+        }
+        if (!Number.isNaN(currentTemp)) {
+            if (currentTemp <= 18)
+                return "#3b82f6";
+            if (currentTemp <= 20)
+                return "#38bdf8";
+            if (currentTemp <= 22)
+                return "#22c55e";
+            if (currentTemp <= 24)
+                return "#f59e0b";
+            return "#ef4444";
+        }
+        return entity.state === "off" ? "#3b82f6" : "#f59e0b";
+    }
+    renderHeatingTile() {
+        const entityId = this._config?.radiator_entity;
+        const heatingColor = this.getHeatingColor();
+        const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${heatingColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 5h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/><path d="M15 9h4a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/><path d="M5 3v2"/><path d="M11 1v4"/><path d="M17 5v4"/></svg>`;
+        if (!entityId) {
+            return `
+        <div class="rc-tile rc-tile-disabled">
+          <div class="rc-tile-header">
+            <div class="rc-tile-name">Heizung</div>
+            <div class="rc-tile-icon">${svgIcon}</div>
+          </div>
+          <div class="rc-tile-state">nicht konfiguriert</div>
+        </div>
+      `;
+        }
+        const entity = this.getEntity(entityId);
+        const state = entity?.state ?? "unbekannt";
+        const isActive = this.isEntityActive(entity);
+        const targetTemp = entity?.attributes?.temperature;
+        const stateText = targetTemp ? `${state} · ${targetTemp} °C` : state;
+        return `
+      <div class="rc-tile ${isActive ? "rc-tile-active" : ""}" data-entity="${entityId}">
+        <div class="rc-tile-header">
+          <div class="rc-tile-name">Heizung</div>
+          <div class="rc-tile-icon">${svgIcon}</div>
+        </div>
+        <div class="rc-tile-state" style="color:${heatingColor}">${stateText}</div>
       </div>
     `;
     }
