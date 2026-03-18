@@ -266,7 +266,7 @@ class RaumcontrollerCard extends HTMLElement {
             ${this.renderTile("Klima", this._config.ac_entity, "❄️")}
             ${this.renderHeatingTile()}
             ${this.renderTile("Musik", this._config.media_entity, "🎵")}
-            ${this.renderTile("Abwesend", this._config.away_script, "🚪")}
+            ${this.renderTile("Abwesend", this._config.away_script, "🏠")}
           </div>
         </div>
       </ha-card>
