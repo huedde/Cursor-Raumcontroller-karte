@@ -27,6 +27,7 @@ interface RaumcontrollerCardConfig {
   ac_entity?: string;
   radiator_entity?: string;
   media_entity?: string;
+  away_script?: string;
 }
 
 const CARD_VERSION = "0.1.0";
@@ -311,6 +312,7 @@ export class RaumcontrollerCard extends HTMLElement {
             ${this.renderTile("Klima", this._config.ac_entity, "❄️")}
             ${this.renderHeatingTile()}
             ${this.renderTile("Musik", this._config.media_entity, "🎵")}
+            ${this.renderTile("Abwesend", this._config.away_script, "🚪")}
           </div>
         </div>
       </ha-card>
@@ -491,11 +493,11 @@ export class RaumcontrollerCard extends HTMLElement {
 
     const [domain] = entityId.split(".");
     const entity = this.getEntity(entityId);
-    if (!entity) return;
+    if (!entity && domain !== "script") return;
 
     switch (domain) {
       case "light":
-        this._hass.callService("light", entity.state === "on" ? "turn_off" : "turn_on", {
+        this._hass.callService("light", entity!.state === "on" ? "turn_off" : "turn_on", {
           entity_id: entityId
         });
         break;
@@ -507,6 +509,11 @@ export class RaumcontrollerCard extends HTMLElement {
         break;
       case "media_player":
         this.openMoreInfo(entityId);
+        break;
+      case "script":
+        this._hass.callService("script", "turn_on", {
+          entity_id: entityId
+        });
         break;
       default:
         this._hass.callService(domain, "toggle", {
@@ -573,6 +580,11 @@ const FORM_SCHEMA = [
     type: "string",
     name: "media_entity",
     selector: { entity: { domain: "media_player" } }
+  },
+  {
+    type: "string",
+    name: "away_script",
+    selector: { entity: { domain: "script" } }
   }
 ];
 
@@ -585,7 +597,8 @@ const LABELS: Record<string, string> = {
   cover_entity: "Jalousien",
   ac_entity: "Klimaanlage",
   radiator_entity: "Heizkörper",
-  media_entity: "Musik / Sonos"
+  media_entity: "Musik / Sonos",
+  away_script: "Abwesend-Script"
 };
 
 class RaumcontrollerCardEditor extends HTMLElement {
