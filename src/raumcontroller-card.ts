@@ -314,13 +314,37 @@ export class RaumcontrollerCard extends HTMLElement {
           <div class="rc-grid">
             ${this.renderTile("Govee", this._config.govee_light, "💡")}
             ${this.renderTile("KNX", this._config.knx_light, "💡")}
-            ${this.renderTile("Licht 1", this._config.extra_light_1, "💡")}
-            ${this.renderTile("Licht 2", this._config.extra_light_2, "💡")}
-            ${this.renderTile("Licht 3", this._config.extra_light_3, "💡")}
+            ${this._config.extra_light_1 ? this.renderTile("Licht 1", this._config.extra_light_1, "💡") : ""}
+            ${this._config.extra_light_2 ? this.renderTile("Licht 2", this._config.extra_light_2, "💡") : ""}
+            ${this._config.extra_light_3 ? this.renderTile("Licht 3", this._config.extra_light_3, "💡") : ""}
             ${this.renderTile("Jalousien", this._config.cover_entity, `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="9" width="18" height="4" rx="1"/><rect x="3" y="15" width="18" height="4" rx="1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>`)}
-            ${this.renderTile("Jalousie 1", this._config.extra_cover_1, `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="3" rx="1"/><rect x="3" y="8" width="18" height="3" rx="1"/><rect x="3" y="13" width="18" height="3" rx="1"/><line x1="7" y1="18" x2="7" y2="21"/><line x1="17" y1="18" x2="17" y2="21"/></svg>`)}
-            ${this.renderTile("Jalousie 2", this._config.extra_cover_2, `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="3" rx="1"/><rect x="3" y="8" width="18" height="3" rx="1"/><rect x="3" y="13" width="18" height="3" rx="1"/><line x1="7" y1="18" x2="7" y2="21"/><line x1="17" y1="18" x2="17" y2="21"/></svg>`)}
-            ${this.renderTile("Jalousie 3", this._config.extra_cover_3, `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="3" rx="1"/><rect x="3" y="8" width="18" height="3" rx="1"/><rect x="3" y="13" width="18" height="3" rx="1"/><line x1="7" y1="18" x2="7" y2="21"/><line x1="17" y1="18" x2="17" y2="21"/></svg>`)}
+            ${
+              this._config.extra_cover_1
+                ? this.renderTile(
+                    "Jalousie 1",
+                    this._config.extra_cover_1,
+                    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="3" rx="1"/><rect x="3" y="8" width="18" height="3" rx="1"/><rect x="3" y="13" width="18" height="3" rx="1"/><line x1="7" y1="18" x2="7" y2="21"/><line x1="17" y1="18" x2="17" y2="21"/></svg>`
+                  )
+                : ""
+            }
+            ${
+              this._config.extra_cover_2
+                ? this.renderTile(
+                    "Jalousie 2",
+                    this._config.extra_cover_2,
+                    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="3" rx="1"/><rect x="3" y="8" width="18" height="3" rx="1"/><rect x="3" y="13" width="18" height="3" rx="1"/><line x1="7" y1="18" x2="7" y2="21"/><line x1="17" y1="18" x2="17" y2="21"/></svg>`
+                  )
+                : ""
+            }
+            ${
+              this._config.extra_cover_3
+                ? this.renderTile(
+                    "Jalousie 3",
+                    this._config.extra_cover_3,
+                    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="3" rx="1"/><rect x="3" y="8" width="18" height="3" rx="1"/><rect x="3" y="13" width="18" height="3" rx="1"/><line x1="7" y1="18" x2="7" y2="21"/><line x1="17" y1="18" x2="17" y2="21"/></svg>`
+                  )
+                : ""
+            }
             ${this.renderTile("Klima", this._config.ac_entity, "❄️")}
             ${this.renderHeatingTile()}
             ${this.renderTile(
