@@ -262,7 +262,13 @@ class RaumcontrollerCard extends HTMLElement {
           <div class="rc-grid">
             ${this.renderTile("Govee", this._config.govee_light, "💡")}
             ${this.renderTile("KNX", this._config.knx_light, "💡")}
+            ${this.renderTile("Licht 1", this._config.extra_light_1, "💡")}
+            ${this.renderTile("Licht 2", this._config.extra_light_2, "💡")}
+            ${this.renderTile("Licht 3", this._config.extra_light_3, "💡")}
             ${this.renderTile("Jalousien", this._config.cover_entity, `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="9" width="18" height="4" rx="1"/><rect x="3" y="15" width="18" height="4" rx="1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>`)}
+            ${this.renderTile("Jalousie 1", this._config.extra_cover_1, `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="3" rx="1"/><rect x="3" y="8" width="18" height="3" rx="1"/><rect x="3" y="13" width="18" height="3" rx="1"/><line x1="7" y1="18" x2="7" y2="21"/><line x1="17" y1="18" x2="17" y2="21"/></svg>`)}
+            ${this.renderTile("Jalousie 2", this._config.extra_cover_2, `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="3" rx="1"/><rect x="3" y="8" width="18" height="3" rx="1"/><rect x="3" y="13" width="18" height="3" rx="1"/><line x1="7" y1="18" x2="7" y2="21"/><line x1="17" y1="18" x2="17" y2="21"/></svg>`)}
+            ${this.renderTile("Jalousie 3", this._config.extra_cover_3, `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="3" rx="1"/><rect x="3" y="8" width="18" height="3" rx="1"/><rect x="3" y="13" width="18" height="3" rx="1"/><line x1="7" y1="18" x2="7" y2="21"/><line x1="17" y1="18" x2="17" y2="21"/></svg>`)}
             ${this.renderTile("Klima", this._config.ac_entity, "❄️")}
             ${this.renderHeatingTile()}
             ${this.renderTile("Abwesend", this._config.away_script, `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-5.5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2V21H4a1 1 0 0 1-1-1z"/><circle cx="6.5" cy="9" r="1.4"/><path d="M5.1 14.5c.3-.8 1-1.5 1.9-1.5s1.6.7 1.9 1.5"/></svg>`)}
@@ -508,7 +514,37 @@ const FORM_SCHEMA = [
     },
     {
         type: "string",
+        name: "extra_light_1",
+        selector: { entity: { domain: "light" } }
+    },
+    {
+        type: "string",
+        name: "extra_light_2",
+        selector: { entity: { domain: "light" } }
+    },
+    {
+        type: "string",
+        name: "extra_light_3",
+        selector: { entity: { domain: "light" } }
+    },
+    {
+        type: "string",
         name: "cover_entity",
+        selector: { entity: { domain: "cover" } }
+    },
+    {
+        type: "string",
+        name: "extra_cover_1",
+        selector: { entity: { domain: "cover" } }
+    },
+    {
+        type: "string",
+        name: "extra_cover_2",
+        selector: { entity: { domain: "cover" } }
+    },
+    {
+        type: "string",
+        name: "extra_cover_3",
         selector: { entity: { domain: "cover" } }
     },
     {
@@ -538,7 +574,13 @@ const LABELS = {
     temperature_entity: "Temperatur Sensor",
     govee_light: "Govee Leuchte",
     knx_light: "KNX Leuchte",
+    extra_light_1: "Zusätzliches Licht 1",
+    extra_light_2: "Zusätzliches Licht 2",
+    extra_light_3: "Zusätzliches Licht 3",
     cover_entity: "Jalousien",
+    extra_cover_1: "Zusätzliche Jalousie 1",
+    extra_cover_2: "Zusätzliche Jalousie 2",
+    extra_cover_3: "Zusätzliche Jalousie 3",
     ac_entity: "Klimaanlage",
     radiator_entity: "Heizkörper",
     media_entity: "Musik / Sonos",
