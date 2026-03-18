@@ -1,0 +1,25 @@
+{
+  "name": "home-assistant-raumcontroller-card",
+  "version": "0.1.0",
+  "description": "Moderne Raumcontroller-Karte für Home Assistant (CO2, Temperatur, Licht, Jalousien, Klima, Heizung, Medien).",
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "custom-card",
+    "raumcontroller"
+  ],
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "build": "rollup -c",
+    "build:watch": "rollup -c -w",
+    "lint": "echo \"no lint configured\""
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "rollup": "^4.12.0",
+    "typescript": "^5.6.2"
+  }
+}
+
