@@ -404,27 +404,225 @@ export class RaumcontrollerCard extends HTMLElement {
   }
 
   static getConfigElement(): HTMLElement {
-    const el = document.createElement("div");
-    el.innerHTML =
-      "<p>Konfiguration der raumcontroller-card erfolgt über YAML-Optionen in der Karte.</p>";
-    return el;
+    return document.createElement("raumcontroller-card-editor");
   }
 
   static getStubConfig(): RaumcontrollerCardConfig {
     return {
       type: "custom:raumcontroller-card",
-      title: "Raum",
-      co2_entity: "sensor.co2",
-      temperature_entity: "sensor.temperature"
+      title: "Raum"
     };
   }
 }
 
+const EDITOR_FIELDS: Array<{
+  key: keyof RaumcontrollerCardConfig;
+  label: string;
+  type: "text" | "entity";
+  domainFilter?: string[];
+}> = [
+  { key: "title", label: "Raumname", type: "text" },
+  { key: "co2_entity", label: "CO₂ Sensor", type: "entity", domainFilter: ["sensor"] },
+  { key: "temperature_entity", label: "Temperatur Sensor", type: "entity", domainFilter: ["sensor"] },
+  { key: "govee_light", label: "Govee Leuchte", type: "entity", domainFilter: ["light"] },
+  { key: "knx_light", label: "KNX Leuchte", type: "entity", domainFilter: ["light"] },
+  { key: "cover_entity", label: "Jalousien", type: "entity", domainFilter: ["cover"] },
+  { key: "ac_entity", label: "Klimaanlage", type: "entity", domainFilter: ["climate"] },
+  { key: "radiator_entity", label: "Heizkörper", type: "entity", domainFilter: ["climate"] },
+  { key: "media_entity", label: "Musik / Sonos", type: "entity", domainFilter: ["media_player"] }
+];
+
+class RaumcontrollerCardEditor extends HTMLElement {
+  private _config?: RaumcontrollerCardConfig;
+  private _hass?: HomeAssistant;
+
+  set hass(hass: HomeAssistant) {
+    this._hass = hass;
+    this.renderEditor();
+  }
+
+  setConfig(config: RaumcontrollerCardConfig): void {
+    this._config = { ...config };
+    this.renderEditor();
+  }
+
+  private fireConfigChanged(): void {
+    const event = new CustomEvent("config-changed", {
+      detail: { config: this._config },
+      bubbles: true,
+      composed: true
+    });
+    this.dispatchEvent(event);
+  }
+
+  private renderEditor(): void {
+    if (!this._config) return;
+
+    const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
+
+    root.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          font-family: var(--paper-font-body1_-_font-family, system-ui);
+        }
+
+        .editor {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          padding: 8px 0;
+        }
+
+        .section-title {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--primary-text-color, #e5e7eb);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-top: 8px;
+          padding-bottom: 4px;
+          border-bottom: 1px solid var(--divider-color, rgba(255,255,255,0.12));
+        }
+
+        .field {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .field label {
+          font-size: 0.8rem;
+          color: var(--secondary-text-color, #9ca3af);
+          font-weight: 500;
+        }
+
+        .field ha-entity-picker {
+          width: 100%;
+        }
+
+        .field input[type="text"] {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 8px 12px;
+          border-radius: 8px;
+          border: 1px solid var(--divider-color, rgba(255,255,255,0.12));
+          background: var(--card-background-color, #1e293b);
+          color: var(--primary-text-color, #e5e7eb);
+          font-size: 0.9rem;
+          outline: none;
+        }
+
+        .field input[type="text"]:focus {
+          border-color: var(--primary-color, #2563eb);
+        }
+      </style>
+
+      <div class="editor">
+        <div class="section-title">Allgemein</div>
+        ${this.renderTextField("title", "Raumname")}
+
+        <div class="section-title">Sensoren</div>
+        ${this.renderEntityField("co2_entity", "CO₂ Sensor", ["sensor"])}
+        ${this.renderEntityField("temperature_entity", "Temperatur Sensor", ["sensor"])}
+
+        <div class="section-title">Licht</div>
+        ${this.renderEntityField("govee_light", "Govee Leuchte", ["light"])}
+        ${this.renderEntityField("knx_light", "KNX Leuchte", ["light"])}
+
+        <div class="section-title">Beschattung</div>
+        ${this.renderEntityField("cover_entity", "Jalousien", ["cover"])}
+
+        <div class="section-title">Klima</div>
+        ${this.renderEntityField("ac_entity", "Klimaanlage", ["climate"])}
+        ${this.renderEntityField("radiator_entity", "Heizkörper", ["climate"])}
+
+        <div class="section-title">Medien</div>
+        ${this.renderEntityField("media_entity", "Musik / Sonos", ["media_player"])}
+      </div>
+    `;
+
+    this.attachEditorHandlers();
+  }
+
+  private renderTextField(key: string, label: string): string {
+    const value = (this._config as any)?.[key] ?? "";
+    return `
+      <div class="field">
+        <label>${label}</label>
+        <input type="text" data-key="${key}" value="${value}" placeholder="${label} eingeben…" />
+      </div>
+    `;
+  }
+
+  private renderEntityField(key: string, label: string, domains: string[]): string {
+    const value = (this._config as any)?.[key] ?? "";
+    const domainAttr = domains.map(d => `include-domains='["${d}"]'`).join(" ");
+    return `
+      <div class="field">
+        <label>${label}</label>
+        <ha-entity-picker
+          data-key="${key}"
+          .hass="${"__HASS__"}"
+          .value="${value}"
+          ${domainAttr}
+          allow-custom-entity
+          label="${label}"
+        ></ha-entity-picker>
+      </div>
+    `;
+  }
+
+  private attachEditorHandlers(): void {
+    const root = this.shadowRoot;
+    if (!root) return;
+
+    root.querySelectorAll<HTMLInputElement>("input[type='text']").forEach((input) => {
+      input.addEventListener("input", (e) => {
+        const target = e.target as HTMLInputElement;
+        const key = target.dataset.key as keyof RaumcontrollerCardConfig;
+        if (key && this._config) {
+          (this._config as any)[key] = target.value;
+          this.fireConfigChanged();
+        }
+      });
+    });
+
+    root.querySelectorAll<any>("ha-entity-picker").forEach((picker) => {
+      if (this._hass) {
+        picker.hass = this._hass;
+      }
+
+      const key = picker.dataset.key as keyof RaumcontrollerCardConfig;
+      const currentValue = (this._config as any)?.[key] ?? "";
+      picker.value = currentValue;
+
+      picker.addEventListener("value-changed", (e: CustomEvent) => {
+        if (key && this._config) {
+          (this._config as any)[key] = e.detail.value || "";
+          this.fireConfigChanged();
+        }
+      });
+    });
+  }
+}
+
+customElements.define("raumcontroller-card-editor", RaumcontrollerCardEditor);
+
 declare global {
   interface HTMLElementTagNameMap {
     "raumcontroller-card": RaumcontrollerCard;
+    "raumcontroller-card-editor": RaumcontrollerCardEditor;
   }
 }
 
 customElements.define("raumcontroller-card", RaumcontrollerCard);
+
+(window as any).customCards = (window as any).customCards || [];
+(window as any).customCards.push({
+  type: "raumcontroller-card",
+  name: "Raumcontroller Card",
+  description: "Moderne Raumcontroller-Karte mit CO₂, Temperatur, Licht, Jalousien, Klima, Heizung und Medien.",
+  preview: true
+});
 
