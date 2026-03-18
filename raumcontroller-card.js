@@ -345,7 +345,7 @@ class RaumcontrollerCard extends HTMLElement {
     renderHeatingTile() {
         const entityId = this._config?.radiator_entity;
         const heatingColor = this.getHeatingColor();
-        const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${heatingColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 5h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/><path d="M15 9h4a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/><path d="M5 3v2"/><path d="M11 1v4"/><path d="M17 5v4"/></svg>`;
+        const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${heatingColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/><line x1="12" y1="16" x2="12" y2="12"/></svg>`;
         if (!entityId) {
             return `
         <div class="rc-tile rc-tile-disabled">
