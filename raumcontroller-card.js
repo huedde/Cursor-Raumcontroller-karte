@@ -353,97 +353,103 @@ class RaumcontrollerCard extends HTMLElement {
         };
     }
 }
-const EDITOR_FIELDS = [
-    { key: "title", label: "Raumname", section: "Allgemein" },
-    { key: "co2_entity", label: "CO₂ Sensor", section: "Sensoren", domains: ["sensor"] },
-    { key: "temperature_entity", label: "Temperatur Sensor", section: "Sensoren", domains: ["sensor"] },
-    { key: "govee_light", label: "Govee Leuchte", section: "Licht", domains: ["light"] },
-    { key: "knx_light", label: "KNX Leuchte", section: "Licht", domains: ["light"] },
-    { key: "cover_entity", label: "Jalousien", section: "Beschattung", domains: ["cover"] },
-    { key: "ac_entity", label: "Klimaanlage", section: "Klima", domains: ["climate"] },
-    { key: "radiator_entity", label: "Heizkörper", section: "Klima", domains: ["climate"] },
-    { key: "media_entity", label: "Musik / Sonos", section: "Medien", domains: ["media_player"] }
+const FORM_SCHEMA = [
+    {
+        type: "string",
+        name: "title",
+        required: true,
+        selector: { text: {} }
+    },
+    {
+        type: "string",
+        name: "co2_entity",
+        selector: { entity: { domain: "sensor" } }
+    },
+    {
+        type: "string",
+        name: "temperature_entity",
+        selector: { entity: { domain: "sensor" } }
+    },
+    {
+        type: "string",
+        name: "govee_light",
+        selector: { entity: { domain: "light" } }
+    },
+    {
+        type: "string",
+        name: "knx_light",
+        selector: { entity: { domain: "light" } }
+    },
+    {
+        type: "string",
+        name: "cover_entity",
+        selector: { entity: { domain: "cover" } }
+    },
+    {
+        type: "string",
+        name: "ac_entity",
+        selector: { entity: { domain: "climate" } }
+    },
+    {
+        type: "string",
+        name: "radiator_entity",
+        selector: { entity: { domain: "climate" } }
+    },
+    {
+        type: "string",
+        name: "media_entity",
+        selector: { entity: { domain: "media_player" } }
+    }
 ];
+const LABELS = {
+    title: "Raumname",
+    co2_entity: "CO₂ Sensor",
+    temperature_entity: "Temperatur Sensor",
+    govee_light: "Govee Leuchte",
+    knx_light: "KNX Leuchte",
+    cover_entity: "Jalousien",
+    ac_entity: "Klimaanlage",
+    radiator_entity: "Heizkörper",
+    media_entity: "Musik / Sonos"
+};
 class RaumcontrollerCardEditor extends HTMLElement {
     constructor() {
         super(...arguments);
-        this._pickers = new Map();
-    }
-    connectedCallback() {
-        if (this._config)
-            this._buildEditor();
+        this._form = null;
     }
     set hass(hass) {
         this._hass = hass;
-        this._pickers.forEach((picker) => {
-            picker.hass = hass;
-        });
+        if (this._form) {
+            this._form.hass = hass;
+        }
     }
     setConfig(config) {
         this._config = { ...config };
-        this._buildEditor();
+        this._render();
     }
-    _fireConfigChanged() {
-        this.dispatchEvent(new CustomEvent("config-changed", {
-            detail: { config: { ...this._config } },
-            bubbles: true,
-            composed: true
-        }));
-    }
-    _buildEditor() {
+    _render() {
         if (!this._config)
             return;
-        this.innerHTML = "";
-        this._pickers.clear();
-        const wrapper = document.createElement("div");
-        wrapper.style.cssText = "display:flex;flex-direction:column;gap:12px;padding:8px 0;";
-        let lastSection = "";
-        for (const field of EDITOR_FIELDS) {
-            if (field.section !== lastSection) {
-                lastSection = field.section;
-                const sectionEl = document.createElement("div");
-                sectionEl.style.cssText =
-                    "font-size:0.85rem;font-weight:600;text-transform:uppercase;" +
-                        "letter-spacing:0.05em;margin-top:8px;padding-bottom:4px;" +
-                        "border-bottom:1px solid var(--divider-color,rgba(255,255,255,0.12));" +
-                        "color:var(--primary-text-color,#e5e7eb);";
-                sectionEl.textContent = field.section;
-                wrapper.appendChild(sectionEl);
-            }
-            const row = document.createElement("div");
-            if (!field.domains) {
-                const input = document.createElement("ha-textfield");
-                input.label = field.label;
-                input.value = this._config[field.key] ?? "";
-                input.style.cssText = "width:100%;";
-                input.addEventListener("input", (ev) => {
-                    if (this._config) {
-                        this._config[field.key] = ev.target.value ?? "";
-                        this._fireConfigChanged();
-                    }
-                });
-                row.appendChild(input);
-            }
-            else {
-                const picker = document.createElement("ha-entity-picker");
-                picker.label = field.label;
-                picker.value = this._config[field.key] ?? "";
-                picker.allowCustomEntity = true;
-                picker.includeDomains = field.domains;
-                if (this._hass)
-                    picker.hass = this._hass;
-                picker.addEventListener("value-changed", (ev) => {
-                    if (this._config && ev.detail) {
-                        this._config[field.key] = ev.detail.value ?? "";
-                        this._fireConfigChanged();
-                    }
-                });
-                this._pickers.set(field.key, picker);
-                row.appendChild(picker);
-            }
-            wrapper.appendChild(row);
+        if (!this._form) {
+            this._form = document.createElement("ha-form");
+            this._form.schema = FORM_SCHEMA;
+            this._form.computeLabel = (schema) => LABELS[schema.name] || schema.name;
+            this._form.addEventListener("value-changed", (ev) => {
+                if (!this._config || !ev.detail)
+                    return;
+                this._config = { ...this._config, ...ev.detail.value };
+                this._form.data = this._config;
+                this.dispatchEvent(new CustomEvent("config-changed", {
+                    detail: { config: { ...this._config } },
+                    bubbles: true,
+                    composed: true
+                }));
+            });
+            this.appendChild(this._form);
         }
-        this.appendChild(wrapper);
+        if (this._hass)
+            this._form.hass = this._hass;
+        this._form.data = this._config;
     }
 }
 customElements.define("raumcontroller-card-editor", RaumcontrollerCardEditor);
