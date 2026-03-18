@@ -415,7 +415,7 @@ export class RaumcontrollerCard extends HTMLElement {
     const entity = this.getEntity(entityId);
     const state = entity?.state ?? "unbekannt";
     const isActive = this.isEntityActive(entity);
-    const displayName = entity?.attributes?.friendly_name || label;
+    const displayName = label || entity?.attributes?.friendly_name || "";
 
     return `
       <div class="rc-tile ${isActive ? "rc-tile-active" : ""}" data-entity="${entityId}">
