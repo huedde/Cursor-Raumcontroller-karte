@@ -114,6 +114,7 @@ export class RaumcontrollerCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: var(--rc-gap);
+          min-width: 520px;
         }
 
         .rc-header {
@@ -209,11 +210,15 @@ export class RaumcontrollerCard extends HTMLElement {
           border-radius: 18px;
           padding: 8px;
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 8px;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 800px) {
+          .rc-card {
+            min-width: 0;
+          }
+
           .rc-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
