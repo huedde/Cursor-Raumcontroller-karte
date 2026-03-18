@@ -415,194 +415,162 @@ export class RaumcontrollerCard extends HTMLElement {
   }
 }
 
-const EDITOR_FIELDS: Array<{
+interface EditorField {
   key: keyof RaumcontrollerCardConfig;
   label: string;
-  type: "text" | "entity";
-  domainFilter?: string[];
-}> = [
-  { key: "title", label: "Raumname", type: "text" },
-  { key: "co2_entity", label: "CO₂ Sensor", type: "entity", domainFilter: ["sensor"] },
-  { key: "temperature_entity", label: "Temperatur Sensor", type: "entity", domainFilter: ["sensor"] },
-  { key: "govee_light", label: "Govee Leuchte", type: "entity", domainFilter: ["light"] },
-  { key: "knx_light", label: "KNX Leuchte", type: "entity", domainFilter: ["light"] },
-  { key: "cover_entity", label: "Jalousien", type: "entity", domainFilter: ["cover"] },
-  { key: "ac_entity", label: "Klimaanlage", type: "entity", domainFilter: ["climate"] },
-  { key: "radiator_entity", label: "Heizkörper", type: "entity", domainFilter: ["climate"] },
-  { key: "media_entity", label: "Musik / Sonos", type: "entity", domainFilter: ["media_player"] }
+  section: string;
+  domains?: string[];
+}
+
+const EDITOR_FIELDS: EditorField[] = [
+  { key: "title", label: "Raumname", section: "Allgemein" },
+  { key: "co2_entity", label: "CO₂ Sensor", section: "Sensoren", domains: ["sensor"] },
+  { key: "temperature_entity", label: "Temperatur Sensor", section: "Sensoren", domains: ["sensor"] },
+  { key: "govee_light", label: "Govee Leuchte", section: "Licht", domains: ["light"] },
+  { key: "knx_light", label: "KNX Leuchte", section: "Licht", domains: ["light"] },
+  { key: "cover_entity", label: "Jalousien", section: "Beschattung", domains: ["cover"] },
+  { key: "ac_entity", label: "Klimaanlage", section: "Klima", domains: ["climate"] },
+  { key: "radiator_entity", label: "Heizkörper", section: "Klima", domains: ["climate"] },
+  { key: "media_entity", label: "Musik / Sonos", section: "Medien", domains: ["media_player"] }
 ];
 
 class RaumcontrollerCardEditor extends HTMLElement {
   private _config?: RaumcontrollerCardConfig;
   private _hass?: HomeAssistant;
+  private _initialized = false;
 
   set hass(hass: HomeAssistant) {
     this._hass = hass;
-    this.renderEditor();
+    this._updatePickers();
   }
 
   setConfig(config: RaumcontrollerCardConfig): void {
     this._config = { ...config };
-    this.renderEditor();
+    this._buildEditor();
   }
 
-  private fireConfigChanged(): void {
-    const event = new CustomEvent("config-changed", {
-      detail: { config: this._config },
-      bubbles: true,
-      composed: true
-    });
-    this.dispatchEvent(event);
+  private _fireConfigChanged(): void {
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: { ...this._config } },
+        bubbles: true,
+        composed: true
+      })
+    );
   }
 
-  private renderEditor(): void {
+  private _buildEditor(): void {
     if (!this._config) return;
+
+    if (this._initialized) {
+      this._syncValues();
+      return;
+    }
 
     const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
 
-    root.innerHTML = `
-      <style>
-        :host {
-          display: block;
-          font-family: var(--paper-font-body1_-_font-family, system-ui);
-        }
-
-        .editor {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          padding: 8px 0;
-        }
-
-        .section-title {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: var(--primary-text-color, #e5e7eb);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin-top: 8px;
-          padding-bottom: 4px;
-          border-bottom: 1px solid var(--divider-color, rgba(255,255,255,0.12));
-        }
-
-        .field {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .field label {
-          font-size: 0.8rem;
-          color: var(--secondary-text-color, #9ca3af);
-          font-weight: 500;
-        }
-
-        .field ha-entity-picker {
-          width: 100%;
-        }
-
-        .field input[type="text"] {
-          width: 100%;
-          box-sizing: border-box;
-          padding: 8px 12px;
-          border-radius: 8px;
-          border: 1px solid var(--divider-color, rgba(255,255,255,0.12));
-          background: var(--card-background-color, #1e293b);
-          color: var(--primary-text-color, #e5e7eb);
-          font-size: 0.9rem;
-          outline: none;
-        }
-
-        .field input[type="text"]:focus {
-          border-color: var(--primary-color, #2563eb);
-        }
-      </style>
-
-      <div class="editor">
-        <div class="section-title">Allgemein</div>
-        ${this.renderTextField("title", "Raumname")}
-
-        <div class="section-title">Sensoren</div>
-        ${this.renderEntityField("co2_entity", "CO₂ Sensor", ["sensor"])}
-        ${this.renderEntityField("temperature_entity", "Temperatur Sensor", ["sensor"])}
-
-        <div class="section-title">Licht</div>
-        ${this.renderEntityField("govee_light", "Govee Leuchte", ["light"])}
-        ${this.renderEntityField("knx_light", "KNX Leuchte", ["light"])}
-
-        <div class="section-title">Beschattung</div>
-        ${this.renderEntityField("cover_entity", "Jalousien", ["cover"])}
-
-        <div class="section-title">Klima</div>
-        ${this.renderEntityField("ac_entity", "Klimaanlage", ["climate"])}
-        ${this.renderEntityField("radiator_entity", "Heizkörper", ["climate"])}
-
-        <div class="section-title">Medien</div>
-        ${this.renderEntityField("media_entity", "Musik / Sonos", ["media_player"])}
-      </div>
+    const style = document.createElement("style");
+    style.textContent = `
+      :host { display: block; }
+      .editor { display: flex; flex-direction: column; gap: 12px; padding: 8px 0; }
+      .section-title {
+        font-size: 0.85rem; font-weight: 600;
+        color: var(--primary-text-color, #e5e7eb);
+        text-transform: uppercase; letter-spacing: 0.05em;
+        margin-top: 8px; padding-bottom: 4px;
+        border-bottom: 1px solid var(--divider-color, rgba(255,255,255,0.12));
+      }
+      .field { display: flex; flex-direction: column; gap: 4px; }
+      .field input[type="text"] {
+        width: 100%; box-sizing: border-box;
+        padding: 8px 12px; border-radius: 8px;
+        border: 1px solid var(--divider-color, rgba(255,255,255,0.12));
+        background: var(--card-background-color, #1e293b);
+        color: var(--primary-text-color, #e5e7eb);
+        font-size: 0.9rem; outline: none;
+      }
+      .field input[type="text"]:focus { border-color: var(--primary-color, #2563eb); }
     `;
+    root.appendChild(style);
 
-    this.attachEditorHandlers();
-  }
+    const editor = document.createElement("div");
+    editor.className = "editor";
 
-  private renderTextField(key: string, label: string): string {
-    const value = (this._config as any)?.[key] ?? "";
-    return `
-      <div class="field">
-        <label>${label}</label>
-        <input type="text" data-key="${key}" value="${value}" placeholder="${label} eingeben…" />
-      </div>
-    `;
-  }
+    let lastSection = "";
 
-  private renderEntityField(key: string, label: string, domains: string[]): string {
-    const value = (this._config as any)?.[key] ?? "";
-    const domainAttr = domains.map(d => `include-domains='["${d}"]'`).join(" ");
-    return `
-      <div class="field">
-        <label>${label}</label>
-        <ha-entity-picker
-          data-key="${key}"
-          .hass="${"__HASS__"}"
-          .value="${value}"
-          ${domainAttr}
-          allow-custom-entity
-          label="${label}"
-        ></ha-entity-picker>
-      </div>
-    `;
-  }
-
-  private attachEditorHandlers(): void {
-    const root = this.shadowRoot;
-    if (!root) return;
-
-    root.querySelectorAll<HTMLInputElement>("input[type='text']").forEach((input) => {
-      input.addEventListener("input", (e) => {
-        const target = e.target as HTMLInputElement;
-        const key = target.dataset.key as keyof RaumcontrollerCardConfig;
-        if (key && this._config) {
-          (this._config as any)[key] = target.value;
-          this.fireConfigChanged();
-        }
-      });
-    });
-
-    root.querySelectorAll<any>("ha-entity-picker").forEach((picker) => {
-      if (this._hass) {
-        picker.hass = this._hass;
+    for (const field of EDITOR_FIELDS) {
+      if (field.section !== lastSection) {
+        lastSection = field.section;
+        const sectionEl = document.createElement("div");
+        sectionEl.className = "section-title";
+        sectionEl.textContent = field.section;
+        editor.appendChild(sectionEl);
       }
 
-      const key = picker.dataset.key as keyof RaumcontrollerCardConfig;
-      const currentValue = (this._config as any)?.[key] ?? "";
-      picker.value = currentValue;
+      const fieldDiv = document.createElement("div");
+      fieldDiv.className = "field";
 
-      picker.addEventListener("value-changed", (e: CustomEvent) => {
-        if (key && this._config) {
-          (this._config as any)[key] = e.detail.value || "";
-          this.fireConfigChanged();
-        }
-      });
+      if (!field.domains) {
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = `${field.label} eingeben…`;
+        input.value = (this._config as any)[field.key] ?? "";
+        input.addEventListener("input", () => {
+          if (this._config) {
+            (this._config as any)[field.key] = input.value;
+            this._fireConfigChanged();
+          }
+        });
+        fieldDiv.appendChild(input);
+      } else {
+        const picker = document.createElement("ha-entity-picker") as any;
+        picker.label = field.label;
+        picker.allowCustomEntity = true;
+        picker.includeDomains = field.domains;
+        picker.dataset.key = field.key;
+        if (this._hass) picker.hass = this._hass;
+        picker.value = (this._config as any)[field.key] ?? "";
+
+        picker.addEventListener("value-changed", (ev: CustomEvent) => {
+          if (this._config) {
+            (this._config as any)[field.key] = ev.detail.value || "";
+            this._fireConfigChanged();
+          }
+        });
+
+        fieldDiv.appendChild(picker);
+      }
+
+      editor.appendChild(fieldDiv);
+    }
+
+    root.appendChild(editor);
+    this._initialized = true;
+  }
+
+  private _updatePickers(): void {
+    const root = this.shadowRoot;
+    if (!root || !this._hass) return;
+    root.querySelectorAll("ha-entity-picker").forEach((picker: any) => {
+      picker.hass = this._hass;
+    });
+  }
+
+  private _syncValues(): void {
+    const root = this.shadowRoot;
+    if (!root || !this._config) return;
+
+    root.querySelectorAll<HTMLInputElement>("input[type='text']").forEach((input) => {
+      const key = EDITOR_FIELDS.find(f => !f.domains)?.key;
+      if (key) input.value = (this._config as any)[key] ?? "";
+    });
+
+    root.querySelectorAll("ha-entity-picker").forEach((picker: any) => {
+      const key = picker.dataset.key;
+      if (key) {
+        picker.value = (this._config as any)[key] ?? "";
+        if (this._hass) picker.hass = this._hass;
+      }
     });
   }
 }
