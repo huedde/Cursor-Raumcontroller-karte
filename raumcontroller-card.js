@@ -367,11 +367,17 @@ const EDITOR_FIELDS = [
 class RaumcontrollerCardEditor extends HTMLElement {
     constructor() {
         super(...arguments);
-        this._initialized = false;
+        this._pickers = new Map();
+    }
+    connectedCallback() {
+        if (this._config)
+            this._buildEditor();
     }
     set hass(hass) {
         this._hass = hass;
-        this._updatePickers();
+        this._pickers.forEach((picker) => {
+            picker.hass = hass;
+        });
     }
     setConfig(config) {
         this._config = { ...config };
@@ -387,107 +393,57 @@ class RaumcontrollerCardEditor extends HTMLElement {
     _buildEditor() {
         if (!this._config)
             return;
-        if (this._initialized) {
-            this._syncValues();
-            return;
-        }
-        const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
-        const style = document.createElement("style");
-        style.textContent = `
-      :host { display: block; }
-      .editor { display: flex; flex-direction: column; gap: 12px; padding: 8px 0; }
-      .section-title {
-        font-size: 0.85rem; font-weight: 600;
-        color: var(--primary-text-color, #e5e7eb);
-        text-transform: uppercase; letter-spacing: 0.05em;
-        margin-top: 8px; padding-bottom: 4px;
-        border-bottom: 1px solid var(--divider-color, rgba(255,255,255,0.12));
-      }
-      .field { display: flex; flex-direction: column; gap: 4px; }
-      .field input[type="text"] {
-        width: 100%; box-sizing: border-box;
-        padding: 8px 12px; border-radius: 8px;
-        border: 1px solid var(--divider-color, rgba(255,255,255,0.12));
-        background: var(--card-background-color, #1e293b);
-        color: var(--primary-text-color, #e5e7eb);
-        font-size: 0.9rem; outline: none;
-      }
-      .field input[type="text"]:focus { border-color: var(--primary-color, #2563eb); }
-    `;
-        root.appendChild(style);
-        const editor = document.createElement("div");
-        editor.className = "editor";
+        this.innerHTML = "";
+        this._pickers.clear();
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = "display:flex;flex-direction:column;gap:12px;padding:8px 0;";
         let lastSection = "";
         for (const field of EDITOR_FIELDS) {
             if (field.section !== lastSection) {
                 lastSection = field.section;
                 const sectionEl = document.createElement("div");
-                sectionEl.className = "section-title";
+                sectionEl.style.cssText =
+                    "font-size:0.85rem;font-weight:600;text-transform:uppercase;" +
+                        "letter-spacing:0.05em;margin-top:8px;padding-bottom:4px;" +
+                        "border-bottom:1px solid var(--divider-color,rgba(255,255,255,0.12));" +
+                        "color:var(--primary-text-color,#e5e7eb);";
                 sectionEl.textContent = field.section;
-                editor.appendChild(sectionEl);
+                wrapper.appendChild(sectionEl);
             }
-            const fieldDiv = document.createElement("div");
-            fieldDiv.className = "field";
+            const row = document.createElement("div");
             if (!field.domains) {
-                const input = document.createElement("input");
-                input.type = "text";
-                input.placeholder = `${field.label} eingeben…`;
+                const input = document.createElement("ha-textfield");
+                input.label = field.label;
                 input.value = this._config[field.key] ?? "";
-                input.addEventListener("input", () => {
+                input.style.cssText = "width:100%;";
+                input.addEventListener("input", (ev) => {
                     if (this._config) {
-                        this._config[field.key] = input.value;
+                        this._config[field.key] = ev.target.value ?? "";
                         this._fireConfigChanged();
                     }
                 });
-                fieldDiv.appendChild(input);
+                row.appendChild(input);
             }
             else {
                 const picker = document.createElement("ha-entity-picker");
                 picker.label = field.label;
+                picker.value = this._config[field.key] ?? "";
                 picker.allowCustomEntity = true;
                 picker.includeDomains = field.domains;
-                picker.dataset.key = field.key;
                 if (this._hass)
                     picker.hass = this._hass;
-                picker.value = this._config[field.key] ?? "";
                 picker.addEventListener("value-changed", (ev) => {
-                    if (this._config) {
-                        this._config[field.key] = ev.detail.value || "";
+                    if (this._config && ev.detail) {
+                        this._config[field.key] = ev.detail.value ?? "";
                         this._fireConfigChanged();
                     }
                 });
-                fieldDiv.appendChild(picker);
+                this._pickers.set(field.key, picker);
+                row.appendChild(picker);
             }
-            editor.appendChild(fieldDiv);
+            wrapper.appendChild(row);
         }
-        root.appendChild(editor);
-        this._initialized = true;
-    }
-    _updatePickers() {
-        const root = this.shadowRoot;
-        if (!root || !this._hass)
-            return;
-        root.querySelectorAll("ha-entity-picker").forEach((picker) => {
-            picker.hass = this._hass;
-        });
-    }
-    _syncValues() {
-        const root = this.shadowRoot;
-        if (!root || !this._config)
-            return;
-        root.querySelectorAll("input[type='text']").forEach((input) => {
-            const key = EDITOR_FIELDS.find(f => !f.domains)?.key;
-            if (key)
-                input.value = this._config[key] ?? "";
-        });
-        root.querySelectorAll("ha-entity-picker").forEach((picker) => {
-            const key = picker.dataset.key;
-            if (key) {
-                picker.value = this._config[key] ?? "";
-                if (this._hass)
-                    picker.hass = this._hass;
-            }
-        });
+        this.appendChild(wrapper);
     }
 }
 customElements.define("raumcontroller-card-editor", RaumcontrollerCardEditor);
